@@ -57,7 +57,6 @@ export default class SuperVExtension extends Extension {
         this._history = [];
         this._lastText = '';
         this._popup = null;
-        this._grab = null;
         this._activeTab = 'all'; // 'all' | 'pinned'
         this._searchQuery = '';
         this._selectedIndex = -1;
@@ -378,14 +377,9 @@ export default class SuperVExtension extends Extension {
         // Render Cards
         this._renderEntries();
 
-        // Add to UI Group
-        Main.uiGroup.add_child(this._popup);
-
-        // Position popup accurately on the monitor containing cursor
-        this._positionPopup();
-
-        // Modal Grab for Keyboard & Pointer routing
-        this._grab = Main.pushModal(this._popup);
+        // Exact original GNOME extension layout attachment
+        Main.layoutManager.addChrome(this._popup);
+        this._positionAtCursor();
 
         // Stage Captured Event for Escape key & Outside Click dismissal
         this._stageEventId = global.stage.connect('captured-event', (stage, event) => {
@@ -398,6 +392,20 @@ export default class SuperVExtension extends Extension {
 
         // Keyboard focus on search bar
         this._searchEntry.grab_key_focus();
+    }
+
+    _positionAtCursor() {
+        const monitor = Main.layoutManager.currentMonitor;
+
+        const [, natWidth] = this._popup.get_preferred_width(-1);
+        const [, natHeight] = this._popup.get_preferred_height(natWidth);
+
+        const [pointerX, pointerY] = global.get_pointer();
+
+        const x = Math.max(monitor.x, Math.min(pointerX + 12, monitor.x + monitor.width - natWidth));
+        const y = Math.max(monitor.y, Math.min(pointerY + 12, monitor.y + monitor.height - natHeight));
+
+        this._popup.set_position(x, y);
     }
 
     _updateTabsState() {
@@ -652,77 +660,6 @@ export default class SuperVExtension extends Extension {
         this._renderEntries();
     }
 
-    _positionPopup() {
-        const focusWindow = global.display.focus_window;
-        const [rawPointerX, rawPointerY] = global.get_pointer();
-
-        let targetMonitor = null;
-
-        // Check if pointer is on a valid monitor
-        let pointerMonitor = null;
-        if (typeof rawPointerX === 'number' && typeof rawPointerY === 'number' &&
-            !(rawPointerX === 0 && rawPointerY === 0)) {
-            pointerMonitor = Main.layoutManager.monitors.find(m =>
-                rawPointerX >= m.x && rawPointerX < m.x + m.width &&
-                rawPointerY >= m.y && rawPointerY < m.y + m.height
-            );
-        }
-
-        // 1. Prioritize active focused window's monitor
-        if (focusWindow) {
-            const focusMonitorIdx = focusWindow.get_monitor();
-            targetMonitor = Main.layoutManager.monitors[focusMonitorIdx];
-        }
-
-        // 2. If no focused window, use pointer's monitor or primary
-        if (!targetMonitor) {
-            targetMonitor = pointerMonitor || Main.layoutManager.currentMonitor || Main.layoutManager.primaryMonitor;
-        }
-
-        const positionMode = this._settings ? this._settings.get_string('position-mode') : 'cursor';
-
-        const width = 380;
-        const height = 480;
-
-        let x, y;
-
-        if (positionMode === 'center') {
-            x = targetMonitor.x + (targetMonitor.width - width) / 2;
-            y = targetMonitor.y + (targetMonitor.height - height) / 2;
-        } else if (positionMode === 'bottom-right') {
-            x = targetMonitor.x + targetMonitor.width - width - 24;
-            y = targetMonitor.y + targetMonitor.height - height - 24;
-        } else {
-            // Default: If mouse pointer is on targetMonitor, place at cursor
-            if (pointerMonitor && pointerMonitor === targetMonitor) {
-                x = rawPointerX + 12;
-                y = rawPointerY + 12;
-
-                if (x + width > targetMonitor.x + targetMonitor.width - 16) {
-                    x = rawPointerX - width - 12;
-                }
-                if (y + height > targetMonitor.y + targetMonitor.height - 16) {
-                    y = rawPointerY - height - 12;
-                }
-            } else if (focusWindow) {
-                // If cursor is on a different monitor or idle, center on active focused window
-                const frameRect = focusWindow.get_frame_rect();
-                x = frameRect.x + Math.round((frameRect.width - width) / 2);
-                y = frameRect.y + Math.round((frameRect.height - height) / 2);
-            } else {
-                // Fallback: center of targetMonitor
-                x = targetMonitor.x + (targetMonitor.width - width) / 2;
-                y = targetMonitor.y + (targetMonitor.height - height) / 2;
-            }
-
-            // Strictly clamp to stay within targetMonitor boundaries
-            x = Math.max(targetMonitor.x + 16, Math.min(x, targetMonitor.x + targetMonitor.width - width - 16));
-            y = Math.max(targetMonitor.y + 16, Math.min(y, targetMonitor.y + targetMonitor.height - height - 16));
-        }
-
-        this._popup.set_position(Math.round(x), Math.round(y));
-    }
-
     _onCapturedStageEvent(event) {
         if (!this._popup || !this._popup.visible)
             return Clutter.EVENT_PROPAGATE;
@@ -788,7 +725,7 @@ export default class SuperVExtension extends Extension {
 
             if (!isInsideActor && !isInsideCoords) {
                 this._closePopup();
-                return Clutter.EVENT_STOP;
+                return Clutter.EVENT_PROPAGATE;
             }
         }
 
@@ -844,10 +781,8 @@ export default class SuperVExtension extends Extension {
     }
 
     _closePopup() {
-        if (this._grab) {
-            Main.popModal(this._grab);
-            this._grab = null;
-        }
+        if (!this._popup)
+            return;
 
         if (this._stageEventId) {
             global.stage.disconnect(this._stageEventId);
@@ -864,12 +799,9 @@ export default class SuperVExtension extends Extension {
             this._workspaceChangedId = null;
         }
 
-        if (this._popup) {
-            Main.uiGroup.remove_child(this._popup);
-            this._popup.destroy();
-            this._popup = null;
-        }
-
+        Main.layoutManager.removeChrome(this._popup);
+        this._popup.destroy();
+        this._popup = null;
         this._entriesBox = null;
         this._scrollView = null;
         this._searchEntry = null;
