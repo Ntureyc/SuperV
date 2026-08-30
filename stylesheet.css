@@ -1,0 +1,296 @@
+/* Windows 11 Fluent Style Clipboard Popup */
+
+.superv-modal-container {
+    background-color: transparent;
+}
+
+.clipboard-history-popup {
+    background-color: rgba(30, 31, 34, 0.96);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+    padding: 12px;
+    spacing: 8px;
+    width: 380px;
+    max-height: 540px;
+}
+
+/* Header Section */
+.clipboard-history-header {
+    spacing: 8px;
+    padding: 2px 4px 6px 4px;
+}
+
+.clipboard-history-title-box {
+    spacing: 8px;
+}
+
+.clipboard-history-title-icon {
+    icon-size: 16px;
+    color: #60a5fa;
+}
+
+.clipboard-history-title {
+    color: #ffffff;
+    font-size: 13pt;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.clipboard-history-badge {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 8.5pt;
+    font-weight: 600;
+}
+
+/* Header Action Buttons */
+.clipboard-history-btn-clear {
+    color: #cbd5e1;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 9pt;
+    font-weight: 600;
+    spacing: 6px;
+    transition-duration: 150ms;
+}
+
+.clipboard-history-btn-clear StIcon {
+    icon-size: 13px;
+}
+
+.clipboard-history-btn-clear:hover {
+    color: #ffffff;
+    background-color: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.clipboard-history-btn-close {
+    color: #94a3b8;
+    background-color: transparent;
+    border-radius: 8px;
+    padding: 4px 6px;
+    transition-duration: 150ms;
+}
+
+.clipboard-history-btn-close StIcon {
+    icon-size: 14px;
+}
+
+.clipboard-history-btn-close:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Search Bar */
+.clipboard-history-search-container {
+    padding: 2px 0 4px 0;
+}
+
+.clipboard-history-search-entry {
+    background-color: rgba(255, 255, 255, 0.07);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 9.5pt;
+    caret-color: #60a5fa;
+    transition-duration: 150ms;
+}
+
+.clipboard-history-search-entry:focus {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: #60a5fa;
+    box-shadow: inset 0 0 0 1px #60a5fa;
+}
+
+.clipboard-history-search-entry StIcon {
+    icon-size: 14px;
+    color: #94a3b8;
+}
+
+/* Filter Tabs (All / Pinned) */
+.clipboard-history-tabs {
+    spacing: 6px;
+    padding: 2px 0 4px 0;
+}
+
+.clipboard-history-tab {
+    color: #94a3b8;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 9pt;
+    font-weight: 600;
+    spacing: 6px;
+    transition-duration: 150ms;
+}
+
+.clipboard-history-tab StIcon {
+    icon-size: 13px;
+}
+
+.clipboard-history-tab:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.clipboard-history-tab-active {
+    color: #ffffff;
+    background-color: rgba(96, 165, 250, 0.25);
+    border: 1px solid rgba(96, 165, 250, 0.5);
+}
+
+.clipboard-history-tab-active StIcon {
+    color: #60a5fa;
+}
+
+/* Scroll View & List */
+.clipboard-history-scrollview {
+    max-height: 400px;
+}
+
+.clipboard-history-list {
+    spacing: 6px;
+    padding: 2px;
+}
+
+/* Clip Card */
+.clipboard-history-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 8px 10px;
+    spacing: 6px;
+    transition-duration: 150ms;
+}
+
+.clipboard-history-card:hover {
+    background-color: rgba(255, 255, 255, 0.11);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.clipboard-history-card-pinned {
+    border-left: 3px solid #f59e0b;
+    background-color: rgba(245, 158, 11, 0.08);
+}
+
+.clipboard-history-card-pinned:hover {
+    background-color: rgba(245, 158, 11, 0.14);
+}
+
+/* Card Header (Meta + Buttons) */
+.clipboard-history-card-header {
+    spacing: 6px;
+}
+
+.clipboard-history-type-badge {
+    background-color: rgba(255, 255, 255, 0.09);
+    border-radius: 4px;
+    padding: 1px 6px;
+    spacing: 4px;
+}
+
+.clipboard-history-type-icon {
+    icon-size: 11px;
+    color: #94a3b8;
+}
+
+.clipboard-history-type-text {
+    color: #94a3b8;
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.clipboard-history-time-label {
+    color: #64748b;
+    font-size: 8pt;
+}
+
+.clipboard-history-card-actions {
+    spacing: 2px;
+}
+
+.clipboard-history-card-btn {
+    color: #94a3b8;
+    background-color: transparent;
+    border-radius: 6px;
+    padding: 3px 6px;
+    transition-duration: 150ms;
+}
+
+.clipboard-history-card-btn StIcon {
+    icon-size: 13px;
+}
+
+.clipboard-history-card-btn:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.clipboard-history-card-btn-pinned {
+    color: #f59e0b;
+}
+
+.clipboard-history-card-btn-pinned StIcon {
+    color: #f59e0b;
+}
+
+.clipboard-history-card-btn-delete:hover {
+    color: #f87171;
+    background-color: rgba(239, 68, 68, 0.2);
+}
+
+.clipboard-history-card-btn-delete:hover StIcon {
+    color: #f87171;
+}
+
+/* Card Content / Text Preview */
+.clipboard-history-card-content {
+    color: #f1f5f9;
+    font-size: 9.5pt;
+    line-height: 1.35;
+    text-align: left;
+}
+
+.clipboard-history-card-code {
+    font-family: monospace;
+    color: #93c5fd;
+    font-size: 9pt;
+}
+
+/* Color Preview Swatch */
+.clipboard-history-color-preview {
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    min-width: 14px;
+    min-height: 14px;
+}
+
+/* Empty State */
+.clipboard-history-empty-box {
+    padding: 32px 16px;
+    spacing: 10px;
+}
+
+.clipboard-history-empty-icon {
+    icon-size: 40px;
+    color: #475569;
+}
+
+.clipboard-history-empty-title {
+    color: #cbd5e1;
+    font-size: 11pt;
+    font-weight: 600;
+}
+
+.clipboard-history-empty-subtitle {
+    color: #64748b;
+    font-size: 8.5pt;
+    text-align: center;
+}

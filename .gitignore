@@ -1,0 +1,6 @@
+schemas/gschemas.compiled
+.DS_Store
+*.swp
+*~
+node_modules/
+dist/

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.superv" path="/org/gnome/shell/extensions/superv/">
+    <key name="toggle-clipboard-history" type="as">
+      <default>['&lt;Super&gt;v']</default>
+      <summary>Toggle SuperV popup</summary>
+      <description>Keyboard shortcut to toggle the SuperV clipboard history popup.</description>
+    </key>
+    <key name="history-size" type="i">
+      <default>50</default>
+      <summary>Maximum number of history items</summary>
+      <description>The maximum number of clipboard items to keep in history.</description>
+    </key>
+    <key name="auto-paste" type="b">
+      <default>true</default>
+      <summary>Auto-paste on selection</summary>
+      <description>Automatically paste into the previous window when an item is selected.</description>
+    </key>
+    <key name="position-mode" type="s">
+      <default>'cursor'</default>
+      <summary>Popup position</summary>
+      <description>Where to position the popup: cursor, center, or bottom-right.</description>
+    </key>
+    <key name="save-history" type="b">
+      <default>true</default>
+      <summary>Persist history across reboots</summary>
+      <description>Save clipboard items and pinned clips to disk.</description>
+    </key>
+  </schema>
+</schemalist>

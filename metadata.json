@@ -1,0 +1,17 @@
+{
+  "name": "SuperV",
+  "description": "Windows 11-style clipboard history flyout for GNOME Shell with auto-close on click-outside, instant search, pin/unpin, auto-paste, and Super+V shortcut.",
+  "uuid": "superv@ntureyc",
+  "creator": "ntureyc",
+  "settings-schema": "org.gnome.shell.extensions.superv",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50"
+  ],
+  "url": "https://github.com/Ntureyc/SuperV",
+  "version": 1
+}
