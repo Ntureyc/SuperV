@@ -654,8 +654,9 @@ export default class SuperVExtension extends Extension {
 
     _positionPopup() {
         let [pointerX, pointerY] = global.get_pointer();
+        const focusWindow = global.display.focus_window;
 
-        // 1. Locate the exact monitor containing the pointer
+        // 1. Locate the active work monitor containing the mouse pointer
         let targetMonitor = null;
         if (typeof pointerX === 'number' && typeof pointerY === 'number') {
             targetMonitor = Main.layoutManager.monitors.find(m =>
@@ -664,22 +665,30 @@ export default class SuperVExtension extends Extension {
             );
         }
 
+        // 2. If pointer is outside known bounds, fallback to active focused window's monitor
+        if (!targetMonitor && focusWindow) {
+            const focusMonitorIdx = focusWindow.get_monitor();
+            targetMonitor = Main.layoutManager.monitors[focusMonitorIdx];
+        }
+
+        // 3. Fallback to current / primary monitor
         if (!targetMonitor) {
             const monitorIdx = global.display.get_current_monitor();
             targetMonitor = Main.layoutManager.monitors[monitorIdx] || Main.layoutManager.currentMonitor || Main.layoutManager.primaryMonitor;
-            if (typeof pointerX !== 'number' || typeof pointerY !== 'number') {
-                pointerX = targetMonitor.x + Math.round(targetMonitor.width / 2);
-                pointerY = targetMonitor.y + Math.round(targetMonitor.height / 2);
-            }
+        }
+
+        // If pointer coordinates are outside target monitor, anchor to monitor center
+        if (typeof pointerX !== 'number' || typeof pointerY !== 'number' ||
+            pointerX < targetMonitor.x || pointerX >= targetMonitor.x + targetMonitor.width ||
+            pointerY < targetMonitor.y || pointerY >= targetMonitor.y + targetMonitor.height) {
+            pointerX = targetMonitor.x + Math.round(targetMonitor.width / 2);
+            pointerY = targetMonitor.y + Math.round(targetMonitor.height / 2);
         }
 
         const positionMode = this._settings ? this._settings.get_string('position-mode') : 'cursor';
 
-        const [, natWidth] = this._popup.get_preferred_width(-1);
-        const [, natHeight] = this._popup.get_preferred_height(natWidth);
-
-        const width = Math.min(natWidth || 380, 420);
-        const height = Math.min(natHeight || 360, 560);
+        const width = 380;
+        const height = 480;
 
         let x, y;
 
@@ -690,20 +699,20 @@ export default class SuperVExtension extends Extension {
             x = targetMonitor.x + targetMonitor.width - width - 24;
             y = targetMonitor.y + targetMonitor.height - height - 24;
         } else {
-            // Default: Directly next to the cursor within the active monitor bounds
-            const margin = 16;
-            const minX = targetMonitor.x + margin;
-            const maxX = targetMonitor.x + targetMonitor.width - width - margin;
-            const minY = targetMonitor.y + margin;
-            const maxY = targetMonitor.y + targetMonitor.height - height - margin;
-
-            x = Math.max(minX, Math.min(pointerX + 12, maxX));
+            // Windows 11-style cursor anchor:
+            // Place directly at cursor and flip if near screen edges
+            x = pointerX + 12;
             y = pointerY + 12;
 
-            if (y > maxY) {
-                y = Math.max(minY, pointerY - height - 12);
+            if (x + width > targetMonitor.x + targetMonitor.width - 16) {
+                x = pointerX - width - 12;
             }
-            y = Math.max(minY, Math.min(y, maxY));
+            x = Math.max(targetMonitor.x + 16, Math.min(x, targetMonitor.x + targetMonitor.width - width - 16));
+
+            if (y + height > targetMonitor.y + targetMonitor.height - 16) {
+                y = pointerY - height - 12;
+            }
+            y = Math.max(targetMonitor.y + 16, Math.min(y, targetMonitor.y + targetMonitor.height - height - 16));
         }
 
         this._popup.set_position(Math.round(x), Math.round(y));

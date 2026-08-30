@@ -1,18 +1,12 @@
 /* Windows 11 Fluent Style Clipboard Popup */
 
-.superv-modal-container {
-    background-color: transparent;
-}
-
 .clipboard-history-popup {
     background-color: rgba(30, 31, 34, 0.96);
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
     padding: 12px;
     spacing: 8px;
     width: 380px;
-    max-height: 540px;
 }
 
 /* Header Section */
@@ -105,7 +99,6 @@
 .clipboard-history-search-entry:focus {
     background-color: rgba(255, 255, 255, 0.12);
     border-color: #60a5fa;
-    box-shadow: inset 0 0 0 1px #60a5fa;
 }
 
 .clipboard-history-search-entry StIcon {
@@ -151,7 +144,7 @@
 
 /* Scroll View & List */
 .clipboard-history-scrollview {
-    max-height: 400px;
+    height: 380px;
 }
 
 .clipboard-history-list {
