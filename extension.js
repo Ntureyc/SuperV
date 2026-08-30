@@ -653,36 +653,30 @@ export default class SuperVExtension extends Extension {
     }
 
     _positionPopup() {
-        let [pointerX, pointerY] = global.get_pointer();
         const focusWindow = global.display.focus_window;
+        const [rawPointerX, rawPointerY] = global.get_pointer();
 
-        // 1. Locate the active work monitor containing the mouse pointer
         let targetMonitor = null;
-        if (typeof pointerX === 'number' && typeof pointerY === 'number') {
-            targetMonitor = Main.layoutManager.monitors.find(m =>
-                pointerX >= m.x && pointerX < m.x + m.width &&
-                pointerY >= m.y && pointerY < m.y + m.height
+
+        // Check if pointer is on a valid monitor
+        let pointerMonitor = null;
+        if (typeof rawPointerX === 'number' && typeof rawPointerY === 'number' &&
+            !(rawPointerX === 0 && rawPointerY === 0)) {
+            pointerMonitor = Main.layoutManager.monitors.find(m =>
+                rawPointerX >= m.x && rawPointerX < m.x + m.width &&
+                rawPointerY >= m.y && rawPointerY < m.y + m.height
             );
         }
 
-        // 2. If pointer is outside known bounds, fallback to active focused window's monitor
-        if (!targetMonitor && focusWindow) {
+        // 1. Prioritize active focused window's monitor
+        if (focusWindow) {
             const focusMonitorIdx = focusWindow.get_monitor();
             targetMonitor = Main.layoutManager.monitors[focusMonitorIdx];
         }
 
-        // 3. Fallback to current / primary monitor
+        // 2. If no focused window, use pointer's monitor or primary
         if (!targetMonitor) {
-            const monitorIdx = global.display.get_current_monitor();
-            targetMonitor = Main.layoutManager.monitors[monitorIdx] || Main.layoutManager.currentMonitor || Main.layoutManager.primaryMonitor;
-        }
-
-        // If pointer coordinates are outside target monitor, anchor to monitor center
-        if (typeof pointerX !== 'number' || typeof pointerY !== 'number' ||
-            pointerX < targetMonitor.x || pointerX >= targetMonitor.x + targetMonitor.width ||
-            pointerY < targetMonitor.y || pointerY >= targetMonitor.y + targetMonitor.height) {
-            pointerX = targetMonitor.x + Math.round(targetMonitor.width / 2);
-            pointerY = targetMonitor.y + Math.round(targetMonitor.height / 2);
+            targetMonitor = pointerMonitor || Main.layoutManager.currentMonitor || Main.layoutManager.primaryMonitor;
         }
 
         const positionMode = this._settings ? this._settings.get_string('position-mode') : 'cursor';
@@ -699,19 +693,30 @@ export default class SuperVExtension extends Extension {
             x = targetMonitor.x + targetMonitor.width - width - 24;
             y = targetMonitor.y + targetMonitor.height - height - 24;
         } else {
-            // Windows 11-style cursor anchor:
-            // Place directly at cursor and flip if near screen edges
-            x = pointerX + 12;
-            y = pointerY + 12;
+            // Default: If mouse pointer is on targetMonitor, place at cursor
+            if (pointerMonitor && pointerMonitor === targetMonitor) {
+                x = rawPointerX + 12;
+                y = rawPointerY + 12;
 
-            if (x + width > targetMonitor.x + targetMonitor.width - 16) {
-                x = pointerX - width - 12;
+                if (x + width > targetMonitor.x + targetMonitor.width - 16) {
+                    x = rawPointerX - width - 12;
+                }
+                if (y + height > targetMonitor.y + targetMonitor.height - 16) {
+                    y = rawPointerY - height - 12;
+                }
+            } else if (focusWindow) {
+                // If cursor is on a different monitor or idle, center on active focused window
+                const frameRect = focusWindow.get_frame_rect();
+                x = frameRect.x + Math.round((frameRect.width - width) / 2);
+                y = frameRect.y + Math.round((frameRect.height - height) / 2);
+            } else {
+                // Fallback: center of targetMonitor
+                x = targetMonitor.x + (targetMonitor.width - width) / 2;
+                y = targetMonitor.y + (targetMonitor.height - height) / 2;
             }
+
+            // Strictly clamp to stay within targetMonitor boundaries
             x = Math.max(targetMonitor.x + 16, Math.min(x, targetMonitor.x + targetMonitor.width - width - 16));
-
-            if (y + height > targetMonitor.y + targetMonitor.height - 16) {
-                y = pointerY - height - 12;
-            }
             y = Math.max(targetMonitor.y + 16, Math.min(y, targetMonitor.y + targetMonitor.height - height - 16));
         }
 
