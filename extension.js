@@ -59,13 +59,15 @@ function isTerminalWindow(window) {
         window.get_wm_class?.(),
         window.get_wm_class_instance?.(),
         window.get_gtk_application_id?.(),
+        window.get_title?.(),
         Shell.WindowTracker.get_default()?.get_window_app(window)?.get_id?.(),
     ].filter(Boolean).map(s => String(s).toLowerCase());
 
     const terminalKeywords = [
         'terminal', 'ptyxis', 'console', 'kgx', 'alacritty', 'kitty',
         'foot', 'xterm', 'urxvt', 'terminator', 'tilix', 'wezterm',
-        'blackbox', 'rio', 'st-256color', 'guake', 'tilda', 'ghostty'
+        'blackbox', 'rio', 'st-256color', 'guake', 'tilda', 'ghostty',
+        'mitchellh'
     ];
 
     return identifiers.some(id => terminalKeywords.some(kw => id.includes(kw)));
@@ -777,7 +779,7 @@ export default class SuperVExtension extends Extension {
         if (this._pasteTimeoutId)
             GLib.source_remove(this._pasteTimeoutId);
 
-        this._pasteTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 80, () => {
+        this._pasteTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
             this._pasteTimeoutId = null;
             this._pasteText();
             return GLib.SOURCE_REMOVE;
@@ -796,16 +798,19 @@ export default class SuperVExtension extends Extension {
         const isTerminal = isTerminalWindow(this._previousWindow);
         const now = GLib.get_monotonic_time();
 
-        this._virtualKeyboard.notify_keyval(now, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
-        if (isTerminal)
+        if (isTerminal) {
+            this._virtualKeyboard.notify_keyval(now, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
             this._virtualKeyboard.notify_keyval(now, Clutter.KEY_Shift_L, Clutter.KeyState.PRESSED);
-
-        this._virtualKeyboard.notify_keyval(now, Clutter.KEY_v, Clutter.KeyState.PRESSED);
-        this._virtualKeyboard.notify_keyval(now, Clutter.KEY_v, Clutter.KeyState.RELEASED);
-
-        if (isTerminal)
+            this._virtualKeyboard.notify_keyval(now, Clutter.KEY_V, Clutter.KeyState.PRESSED);
+            this._virtualKeyboard.notify_keyval(now, Clutter.KEY_V, Clutter.KeyState.RELEASED);
             this._virtualKeyboard.notify_keyval(now, Clutter.KEY_Shift_L, Clutter.KeyState.RELEASED);
-        this._virtualKeyboard.notify_keyval(now, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
+            this._virtualKeyboard.notify_keyval(now, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
+        } else {
+            this._virtualKeyboard.notify_keyval(now, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+            this._virtualKeyboard.notify_keyval(now, Clutter.KEY_v, Clutter.KeyState.PRESSED);
+            this._virtualKeyboard.notify_keyval(now, Clutter.KEY_v, Clutter.KeyState.RELEASED);
+            this._virtualKeyboard.notify_keyval(now, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
+        }
     }
 
     _closePopup() {
