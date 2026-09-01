@@ -51,6 +51,26 @@ function formatRelativeTime(timestamp) {
     return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function isTerminalWindow(window) {
+    if (!window)
+        return false;
+
+    const identifiers = [
+        window.get_wm_class?.(),
+        window.get_wm_class_instance?.(),
+        window.get_gtk_application_id?.(),
+        Shell.WindowTracker.get_default()?.get_window_app(window)?.get_id?.(),
+    ].filter(Boolean).map(s => String(s).toLowerCase());
+
+    const terminalKeywords = [
+        'terminal', 'ptyxis', 'console', 'kgx', 'alacritty', 'kitty',
+        'foot', 'xterm', 'urxvt', 'terminator', 'tilix', 'wezterm',
+        'blackbox', 'rio', 'st-256color', 'guake', 'tilda', 'ghostty'
+    ];
+
+    return identifiers.some(id => terminalKeywords.some(kw => id.includes(kw)));
+}
+
 export default class SuperVExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
@@ -773,10 +793,18 @@ export default class SuperVExtension extends Extension {
             this._virtualKeyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
         }
 
+        const isTerminal = isTerminalWindow(this._previousWindow);
         const now = GLib.get_monotonic_time();
+
         this._virtualKeyboard.notify_keyval(now, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+        if (isTerminal)
+            this._virtualKeyboard.notify_keyval(now, Clutter.KEY_Shift_L, Clutter.KeyState.PRESSED);
+
         this._virtualKeyboard.notify_keyval(now, Clutter.KEY_v, Clutter.KeyState.PRESSED);
         this._virtualKeyboard.notify_keyval(now, Clutter.KEY_v, Clutter.KeyState.RELEASED);
+
+        if (isTerminal)
+            this._virtualKeyboard.notify_keyval(now, Clutter.KEY_Shift_L, Clutter.KeyState.RELEASED);
         this._virtualKeyboard.notify_keyval(now, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
     }
 
