@@ -16,6 +16,16 @@
       <summary>Auto-paste on selection</summary>
       <description>Automatically paste into the previous window when an item is selected.</description>
     </key>
+    <key name="paste-mode" type="s">
+      <default>'auto'</default>
+      <summary>Paste shortcut mode</summary>
+      <description>Shortcut strategy to paste text: auto, ctrl-v, ctrl-shift-v, or shift-insert.</description>
+    </key>
+    <key name="paste-delay" type="i">
+      <default>150</default>
+      <summary>Paste activation delay (ms)</summary>
+      <description>Delay in milliseconds after closing popup before simulating paste keystroke.</description>
+    </key>
     <key name="position-mode" type="s">
       <default>'cursor'</default>
       <summary>Popup position</summary>

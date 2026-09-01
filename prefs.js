@@ -17,16 +17,63 @@ export default class ClipboardHistoryPreferences extends ExtensionPreferences {
         // 1. Behavior Group
         const behaviorGroup = new Adw.PreferencesGroup({
             title: _('Behavior & Integration'),
-            description: _('Configure clipboard history behavior and interaction'),
+            description: _('Configure clipboard history behavior and auto-paste interaction'),
         });
 
         // Auto-paste Switch
         const autoPasteRow = new Adw.SwitchRow({
-            title: _('Auto-Paste on Click'),
-            subtitle: _('Automatically paste the selected clip into the active window (Ctrl+V)'),
+            title: _('Auto-Paste on Selection'),
+            subtitle: _('Automatically paste the selected clip into the active window'),
         });
         settings.bind('auto-paste', autoPasteRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behaviorGroup.add(autoPasteRow);
+
+        // Paste Mode Combo
+        const pasteModeOptions = [
+            ['auto', _('Auto-detect (Ctrl+Shift+V for terminals, Ctrl+V for GUI)')],
+            ['ctrl-v', _('Standard (Ctrl+V)')],
+            ['ctrl-shift-v', _('Terminal mode (Ctrl+Shift+V)')],
+            ['shift-insert', _('Universal (Shift+Insert)')],
+        ];
+
+        const pasteModeList = new Gtk.StringList();
+        pasteModeOptions.forEach(opt => pasteModeList.append(opt[1]));
+
+        const currentPasteMode = settings.get_string('paste-mode') || 'auto';
+        let initialPasteIdx = pasteModeOptions.findIndex(opt => opt[0] === currentPasteMode);
+        if (initialPasteIdx === -1)
+            initialPasteIdx = 0;
+
+        const pasteModeRow = new Adw.ComboRow({
+            title: _('Paste Shortcut Mode'),
+            subtitle: _('Shortcut simulated when inserting clips'),
+            model: pasteModeList,
+            selected: initialPasteIdx,
+        });
+        pasteModeRow.connect('notify::selected', (row) => {
+            const idx = row.get_selected();
+            if (idx >= 0 && idx < pasteModeOptions.length) {
+                settings.set_string('paste-mode', pasteModeOptions[idx][0]);
+            }
+        });
+        behaviorGroup.add(pasteModeRow);
+
+        // Paste Delay SpinRow
+        const pasteDelayRow = new Adw.SpinRow({
+            title: _('Paste Activation Delay'),
+            subtitle: _('Delay in ms before injecting keypress to allow window focus transition (50-500ms)'),
+            adjustment: new Gtk.Adjustment({
+                lower: 50,
+                upper: 500,
+                step_increment: 25,
+                page_increment: 50,
+                value: settings.get_int('paste-delay') || 150,
+            }),
+        });
+        pasteDelayRow.connect('notify::value', () => {
+            settings.set_int('paste-delay', pasteDelayRow.get_value_as_int());
+        });
+        behaviorGroup.add(pasteDelayRow);
 
         // Save history Switch
         const saveHistoryRow = new Adw.SwitchRow({
@@ -45,7 +92,7 @@ export default class ClipboardHistoryPreferences extends ExtensionPreferences {
                 upper: 200,
                 step_increment: 5,
                 page_increment: 10,
-                value: settings.get_int('history-size'),
+                value: settings.get_int('history-size') || 50,
             }),
         });
         historySizeRow.connect('notify::value', () => {
@@ -67,19 +114,19 @@ export default class ClipboardHistoryPreferences extends ExtensionPreferences {
             ['bottom-right', _('Bottom Right (Windows-style)')],
         ];
 
-        const stringList = new Gtk.StringList();
-        positionOptions.forEach(opt => stringList.append(opt[1]));
+        const positionList = new Gtk.StringList();
+        positionOptions.forEach(opt => positionList.append(opt[1]));
 
         const currentPos = settings.get_string('position-mode') || 'cursor';
-        let initialIndex = positionOptions.findIndex(opt => opt[0] === currentPos);
-        if (initialIndex === -1)
-            initialIndex = 0;
+        let initialPosIdx = positionOptions.findIndex(opt => opt[0] === currentPos);
+        if (initialPosIdx === -1)
+            initialPosIdx = 0;
 
         const positionRow = new Adw.ComboRow({
             title: _('Popup Position'),
             subtitle: _('Where the clipboard history window should pop up'),
-            model: stringList,
-            selected: initialIndex,
+            model: positionList,
+            selected: initialPosIdx,
         });
 
         positionRow.connect('notify::selected', (row) => {
@@ -115,7 +162,7 @@ export default class ClipboardHistoryPreferences extends ExtensionPreferences {
                 if (file.query_exists(null))
                     file.delete(null);
             } catch (e) {
-                console.error(`Failed to clear history file: ${e.message}`);
+                console.error(`[SuperV] Failed to clear history file: ${e.message}`);
             }
         });
 
