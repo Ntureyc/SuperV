@@ -23,6 +23,8 @@ export class SuperVPopup {
         this._stageEventId = null;
         this._overviewShowingId = null;
         this._workspaceChangedId = null;
+        this._sessionUpdatedId = null;
+        this._monitorsChangedId = null;
     }
 
     isOpen() {
@@ -110,6 +112,11 @@ export class SuperVPopup {
 
         this._overviewShowingId = Main.overview.connect('showing', () => this.close());
         this._workspaceChangedId = global.workspace_manager.connect('active-workspace-changed', () => this.close());
+        this._sessionUpdatedId = Main.sessionMode.connect('updated', () => {
+            if (Main.sessionMode.isLocked)
+                this.close();
+        });
+        this._monitorsChangedId = Main.layoutManager.connect('monitors-changed', () => this.close());
 
         // Focus search entry by default
         this._searchComponent.focus();
@@ -120,22 +127,50 @@ export class SuperVPopup {
             return;
 
         if (this._stageEventId) {
-            global.stage.disconnect(this._stageEventId);
+            try {
+                global.stage.disconnect(this._stageEventId);
+            } catch {}
             this._stageEventId = null;
         }
 
         if (this._overviewShowingId) {
-            Main.overview.disconnect(this._overviewShowingId);
+            try {
+                Main.overview.disconnect(this._overviewShowingId);
+            } catch {}
             this._overviewShowingId = null;
         }
 
         if (this._workspaceChangedId) {
-            global.workspace_manager.disconnect(this._workspaceChangedId);
+            try {
+                global.workspace_manager.disconnect(this._workspaceChangedId);
+            } catch {}
             this._workspaceChangedId = null;
         }
 
-        Main.layoutManager.removeChrome(this._popup);
-        this._popup.destroy();
+        if (this._sessionUpdatedId) {
+            try {
+                Main.sessionMode.disconnect(this._sessionUpdatedId);
+            } catch {}
+            this._sessionUpdatedId = null;
+        }
+
+        if (this._monitorsChangedId) {
+            try {
+                Main.layoutManager.disconnect(this._monitorsChangedId);
+            } catch {}
+            this._monitorsChangedId = null;
+        }
+
+        if (this._popup) {
+            try {
+                if (this._popup.get_parent && this._popup.get_parent())
+                    Main.layoutManager.removeChrome(this._popup);
+            } catch {}
+            try {
+                this._popup.destroy();
+            } catch {}
+        }
+
         this._popup = null;
         this._entriesBox = null;
         this._scrollView = null;
@@ -151,12 +186,37 @@ export class SuperVPopup {
             return;
 
         const [, , natWidth, natHeight] = this._popup.get_preferred_size();
-        const popupWidth = natWidth || 360;
-        const popupHeight = natHeight || 480;
+        const popupWidth = Math.max(natWidth || 0, 380);
+        const popupHeight = Math.max(natHeight || 0, 480);
 
         const [mouseX, mouseY] = global.get_pointer();
-        const currentMonitor = global.display.get_current_monitor();
-        const monitorWorkarea = Main.layoutManager.getWorkAreaForMonitor(currentMonitor);
+
+        // Accurately determine which monitor contains the mouse pointer
+        let targetMonitorIndex = -1;
+        const monitors = Main.layoutManager.monitors || [];
+
+        for (let i = 0; i < monitors.length; i++) {
+            const m = monitors[i];
+            if (mouseX >= m.x && mouseX < m.x + m.width && mouseY >= m.y && mouseY < m.y + m.height) {
+                targetMonitorIndex = i;
+                break;
+            }
+        }
+
+        if (targetMonitorIndex === -1) {
+            targetMonitorIndex = global.display ? global.display.get_current_monitor() : 0;
+        }
+        if (targetMonitorIndex < 0 || targetMonitorIndex >= monitors.length) {
+            targetMonitorIndex = Main.layoutManager.primaryIndex || 0;
+        }
+
+        const monitorWorkarea = Main.layoutManager.getWorkAreaForMonitor(targetMonitorIndex)
+            || (monitors[targetMonitorIndex] ? {
+                x: monitors[targetMonitorIndex].x,
+                y: monitors[targetMonitorIndex].y,
+                width: monitors[targetMonitorIndex].width,
+                height: monitors[targetMonitorIndex].height,
+            } : {x: 0, y: 0, width: 1920, height: 1080});
 
         const positionMode = this._settings
             ? this._settings.get_string('position-mode')
@@ -317,6 +377,13 @@ export class SuperVPopup {
                 return Clutter.EVENT_STOP;
             }
 
+            // Tab / Shift+Tab switches between All and Pinned
+            if (symbol === Clutter.KEY_Tab || symbol === Clutter.KEY_ISO_Left_Tab) {
+                const nextTab = this._activeTab === 'all' ? 'pinned' : 'all';
+                this._handleTabChange(nextTab);
+                return Clutter.EVENT_STOP;
+            }
+
             if (symbol === Clutter.KEY_Down) {
                 if (this._cardButtons.length > 0) {
                     this._selectedIndex = Math.min(this._selectedIndex + 1, this._cardButtons.length - 1);
@@ -325,20 +392,34 @@ export class SuperVPopup {
                 }
             } else if (symbol === Clutter.KEY_Up) {
                 if (this._cardButtons.length > 0) {
-                    this._selectedIndex = Math.max(this._selectedIndex - 1, 0);
-                    this._highlightSelectedCard();
+                    if (this._selectedIndex <= 0) {
+                        this._selectedIndex = -1;
+                        this._highlightSelectedCard();
+                        if (this._searchComponent)
+                            this._searchComponent.focus();
+                    } else {
+                        this._selectedIndex--;
+                        this._highlightSelectedCard();
+                    }
                     return Clutter.EVENT_STOP;
                 }
             } else if (symbol === Clutter.KEY_Return || symbol === Clutter.KEY_KP_Enter) {
                 if (this._selectedIndex >= 0 && this._selectedIndex < this._cardButtons.length) {
                     this._onSelect(this._cardButtons[this._selectedIndex].item.text);
                     return Clutter.EVENT_STOP;
+                } else if (this._selectedIndex === -1 && this._cardButtons.length > 0) {
+                    // Quick paste first result when Enter is pressed in search bar
+                    this._onSelect(this._cardButtons[0].item.text);
+                    return Clutter.EVENT_STOP;
                 }
             } else if (symbol === Clutter.KEY_Delete) {
                 if (this._selectedIndex >= 0 && this._selectedIndex < this._cardButtons.length) {
-                    this._storage.deleteItem(this._cardButtons[this._selectedIndex].item.id);
+                    const idToDelete = this._cardButtons[this._selectedIndex].item.id;
+                    this._storage.deleteItem(idToDelete);
                     this.updateCounts();
                     this.renderEntries();
+                    this._selectedIndex = Math.min(this._selectedIndex, this._cardButtons.length - 1);
+                    this._highlightSelectedCard();
                     return Clutter.EVENT_STOP;
                 }
             }
@@ -349,24 +430,26 @@ export class SuperVPopup {
             const [stageX, stageY] = event.get_coords();
             const actor = global.stage.get_event_actor(event);
 
-            const isInsideActor = this._popup.contains(actor) || actor === this._popup;
+            const isInsideActor = actor ? (this._popup.contains(actor) || actor === this._popup) : false;
 
             let isInsideCoords = false;
-            const [hasExtents, extents] = this._popup.get_transformed_extents();
-            if (hasExtents) {
-                const topLeft = extents.get_top_left();
-                const bottomRight = extents.get_bottom_right();
-                if (
-                    stageX >= topLeft.x && stageX <= bottomRight.x &&
-                    stageY >= topLeft.y && stageY <= bottomRight.y
-                ) {
-                    isInsideCoords = true;
-                }
-            } else {
-                const [px, py] = this._popup.get_transformed_position();
-                const [pw, ph] = this._popup.get_transformed_size();
-                if (stageX >= px && stageX <= px + pw && stageY >= py && stageY <= py + ph) {
-                    isInsideCoords = true;
+            if (this._popup) {
+                const [hasExtents, extents] = this._popup.get_transformed_extents();
+                if (hasExtents) {
+                    const topLeft = extents.get_top_left();
+                    const bottomRight = extents.get_bottom_right();
+                    if (
+                        stageX >= topLeft.x && stageX <= bottomRight.x &&
+                        stageY >= topLeft.y && stageY <= bottomRight.y
+                    ) {
+                        isInsideCoords = true;
+                    }
+                } else {
+                    const [px, py] = this._popup.get_transformed_position();
+                    const [pw, ph] = this._popup.get_transformed_size();
+                    if (stageX >= px && stageX <= px + pw && stageY >= py && stageY <= py + ph) {
+                        isInsideCoords = true;
+                    }
                 }
             }
 
@@ -385,6 +468,11 @@ export class SuperVPopup {
             if (i === this._selectedIndex) {
                 card.add_style_pseudo_class('hover');
                 card.grab_key_focus();
+                if (this._scrollView && this._scrollView.ensure_actor_visible) {
+                    try {
+                        this._scrollView.ensure_actor_visible(card);
+                    } catch {}
+                }
             } else {
                 card.remove_style_pseudo_class('hover');
             }

@@ -38,15 +38,24 @@ export function createHeader({totalCount, onClear, onClose}) {
     header.add_child(titleBox);
 
     // Clear All Button
+    const clearBtnBox = new St.BoxLayout({
+        vertical: false,
+        y_align: Clutter.ActorAlign.CENTER,
+    });
+    const clearIcon = new St.Icon({
+        icon_name: 'user-trash-symbolic',
+        style_class: 'btn-icon-small',
+    });
+    const clearLabel = new St.Label({
+        text: 'Clear',
+        y_align: Clutter.ActorAlign.CENTER,
+    });
+    clearBtnBox.add_child(clearIcon);
+    clearBtnBox.add_child(clearLabel);
+
     const clearBtn = new St.Button({
         style_class: 'clipboard-history-btn-clear',
-        child: new St.BoxLayout({
-            vertical: false,
-            children: [
-                new St.Icon({icon_name: 'user-trash-symbolic', style_class: 'btn-icon-small'}),
-                new St.Label({text: 'Clear'}),
-            ],
-        }),
+        child: clearBtnBox,
         reactive: true,
         track_hover: true,
     });

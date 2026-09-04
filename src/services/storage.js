@@ -4,12 +4,17 @@ import {detectContentType} from '../utils/contentType.js';
 import {DefaultSettings} from '../constants.js';
 
 export class StorageService {
-    constructor() {
+    constructor(saveHistory = true) {
         this._history = [];
+        this._saveHistory = saveHistory;
         this._configDir = GLib.build_filenamev([GLib.get_user_config_dir(), 'superv']);
         this._historyFile = GLib.build_filenamev([this._configDir, 'history.json']);
         this._ensureConfigDir();
         this._migrateOldConfig();
+    }
+
+    setSaveHistory(save) {
+        this._saveHistory = !!save;
     }
 
     _ensureConfigDir() {
@@ -35,7 +40,16 @@ export class StorageService {
         return this._history;
     }
 
+    getLatestText() {
+        return this._history.length > 0 ? this._history[0].text : '';
+    }
+
     load() {
+        if (!this._saveHistory) {
+            this._history = [];
+            return this._history;
+        }
+
         try {
             const file = Gio.File.new_for_path(this._historyFile);
             if (!file.query_exists(null)) {
@@ -44,17 +58,24 @@ export class StorageService {
             }
 
             const [, contents] = file.load_contents(null);
+            if (!contents || contents.length === 0) {
+                this._history = [];
+                return this._history;
+            }
+
             const decoder = new TextDecoder('utf-8');
             const data = JSON.parse(decoder.decode(contents));
 
             if (Array.isArray(data)) {
-                this._history = data.map(item => ({
-                    id: item.id || GLib.uuid_string_random(),
-                    text: item.text || '',
-                    pinned: !!item.pinned,
-                    timestamp: item.timestamp || Date.now(),
-                    type: item.type || detectContentType(item.text || ''),
-                }));
+                this._history = data
+                    .filter(item => item && typeof item.text === 'string' && item.text.trim().length > 0)
+                    .map(item => ({
+                        id: item.id || GLib.uuid_string_random(),
+                        text: item.text,
+                        pinned: !!item.pinned,
+                        timestamp: item.timestamp || Date.now(),
+                        type: item.type || detectContentType(item.text),
+                    }));
             } else {
                 this._history = [];
             }
@@ -67,6 +88,9 @@ export class StorageService {
     }
 
     save() {
+        if (!this._saveHistory)
+            return;
+
         try {
             const encoder = new TextEncoder();
             const data = JSON.stringify(this._history, null, 2);
@@ -102,15 +126,13 @@ export class StorageService {
         this._history.unshift(newItem);
 
         // Prune unpinned items beyond limit
-        const unpinned = this._history.filter(item => !item.pinned);
-        if (unpinned.length > maxHistory) {
-            for (let i = this._history.length - 1; i >= 0; i--) {
-                if (!this._history[i].pinned) {
-                    this._history.splice(i, 1);
-                    break;
-                }
-            }
-        }
+        let unpinnedCount = 0;
+        this._history = this._history.filter(item => {
+            if (item.pinned)
+                return true;
+            unpinnedCount++;
+            return unpinnedCount <= maxHistory;
+        });
 
         this.save();
         return newItem;

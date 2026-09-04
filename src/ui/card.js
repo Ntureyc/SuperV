@@ -123,10 +123,14 @@ export function createCard(item, {onSelect, onTogglePin, onCopy, onDelete}) {
 
     // 3. Card Click -> Select / Auto-Paste
     card.connect('button-press-event', (actor, event) => {
+        if (event.get_button() !== Clutter.BUTTON_PRIMARY)
+            return Clutter.EVENT_PROPAGATE;
+
         const target = global.stage.get_event_actor(event);
         if (
-            target === pinBtn || target === copyBtn || target === delBtn ||
-            pinBtn.contains(target) || copyBtn.contains(target) || delBtn.contains(target)
+            target &&
+            (target === pinBtn || target === copyBtn || target === delBtn ||
+            pinBtn.contains(target) || copyBtn.contains(target) || delBtn.contains(target))
         ) {
             return Clutter.EVENT_PROPAGATE;
         }

@@ -171,19 +171,44 @@ export default class ClipboardHistoryPreferences extends ExtensionPreferences {
 
         page.add(storageGroup);
 
-        // 4. About & Shortcut Info Group
-        const aboutGroup = new Adw.PreferencesGroup({
+        // 4. Keyboard Shortcut Group
+        const shortcutGroup = new Adw.PreferencesGroup({
             title: _('Keyboard Shortcut'),
-            description: _('Default shortcut is Super+V (Windows-style). Dismiss with Esc or clicking outside.'),
+            description: _('Choose the shortcut used to summon the clipboard flyout. Dismiss with Esc or clicking outside.'),
         });
 
-        const shortcutRow = new Adw.ActionRow({
-            title: _('Default Shortcut'),
-            subtitle: _('Super+V (Win+V)'),
-        });
-        aboutGroup.add(shortcutRow);
+        const shortcutOptions = [
+            ['<Super>v', _('Super + V (Windows default)')],
+            ['<Super><Shift>v', _('Super + Shift + V')],
+            ['<Primary><Alt>v', _('Ctrl + Alt + V')],
+            ['<Super>c', _('Super + C')],
+        ];
 
-        page.add(aboutGroup);
+        const shortcutList = new Gtk.StringList();
+        shortcutOptions.forEach(opt => shortcutList.append(opt[1]));
+
+        const currentShortcuts = settings.get_strv('toggle-clipboard-history');
+        const currentPrimaryShortcut = currentShortcuts.length > 0 ? currentShortcuts[0] : '<Super>v';
+        let initialShortcutIdx = shortcutOptions.findIndex(opt => opt[0].toLowerCase() === currentPrimaryShortcut.toLowerCase());
+        if (initialShortcutIdx === -1)
+            initialShortcutIdx = 0;
+
+        const shortcutRow = new Adw.ComboRow({
+            title: _('Activation Shortcut'),
+            subtitle: _('Press this key combination anywhere on your desktop to toggle SuperV'),
+            model: shortcutList,
+            selected: initialShortcutIdx,
+        });
+
+        shortcutRow.connect('notify::selected', (row) => {
+            const idx = row.get_selected();
+            if (idx >= 0 && idx < shortcutOptions.length) {
+                settings.set_strv('toggle-clipboard-history', [shortcutOptions[idx][0]]);
+            }
+        });
+        shortcutGroup.add(shortcutRow);
+
+        page.add(shortcutGroup);
 
         window.add(page);
     }
